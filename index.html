@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Premium</title>
+<style>
+  :root {
+    --bg-1: #0f172a;
+    --bg-2: #1e1b4b;
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #818cf8;
+    --accent-2: #c084fc;
+    --op: #f59e0b;
+    --danger: #f43f5e;
+    --radius: 22px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: radial-gradient(circle at 20% 20%, #312e81 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, #701a75 0%, transparent 40%),
+                linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .calc {
+    width: 100%;
+    max-width: 380px;
+    padding: 24px;
+    border-radius: 32px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .display {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius);
+    padding: 20px;
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+  }
+
+  .expression {
+    color: var(--muted);
+    font-size: 15px;
+    min-height: 20px;
+    word-break: break-all;
+    text-align: right;
+  }
+
+  .result {
+    font-size: 46px;
+    font-weight: 300;
+    margin-top: 6px;
+    word-break: break-all;
+    text-align: right;
+    transition: transform 0.15s ease;
+  }
+
+  .result.pop { transform: scale(1.05); }
+  .result.error { color: var(--danger); font-size: 26px; }
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    height: 72px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+  }
+
+  button:hover { background: rgba(255, 255, 255, 0.14); }
+  button:active { transform: scale(0.94); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  button.fn { color: var(--muted); font-size: 18px; }
+  button.op {
+    background: linear-gradient(135deg, var(--op), #fb923c);
+    border: none;
+    color: #fff;
+    font-size: 26px;
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+  }
+  button.op:hover { background: linear-gradient(135deg, #fbbf24, #fb923c); }
+  button.eq {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border: none;
+    color: #fff;
+    font-size: 26px;
+    box-shadow: 0 8px 24px rgba(129, 140, 248, 0.45);
+  }
+  button.eq:hover { filter: brightness(1.1); }
+  button.zero { grid-column: span 2; }
+
+  footer {
+    margin-top: 18px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  kbd {
+    background: rgba(255,255,255,0.08);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 11px;
+  }
+
+  @media (max-width: 420px) {
+    .calc { padding: 16px; border-radius: 26px; }
+    button { height: 64px; font-size: 20px; }
+    .result { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+  <main class="calc" aria-label="Calculadora">
+    <header>
+      <span>Calculadora</span>
+      <span class="badge">PRO</span>
+    </header>
+
+    <section class="display" aria-live="polite">
+      <div class="expression" id="expression"></div>
+      <div class="result" id="result">0</div>
+    </section>
+
+    <div class="keys">
+      <button class="fn" data-action="clear">AC</button>
+      <button class="fn" data-action="sign">±</button>
+      <button class="fn" data-action="percent">%</button>
+      <button class="op" data-op="/">÷</button>
+
+      <button data-num="7">7</button>
+      <button data-num="8">8</button>
+      <button data-num="9">9</button>
+      <button class="op" data-op="*">×</button>
+
+      <button data-num="4">4</button>
+      <button data-num="5">5</button>
+      <button data-num="6">6</button>
+      <button class="op" data-op="-">−</button>
+
+      <button data-num="1">1</button>
+      <button data-num="2">2</button>
+      <button data-num="3">3</button>
+      <button class="op" data-op="+">+</button>
+
+      <button class="zero" data-num="0">0</button>
+      <button data-action="decimal">,</button>
+      <button class="eq" data-action="equals">=</button>
+    </div>
+
+    <footer>Use o teclado: <kbd>0-9</kbd> <kbd>+ - * /</kbd> <kbd>Enter</kbd> <kbd>Esc</kbd> <kbd>Backspace</kbd></footer>
+  </main>
+
+<script>
+  (() => {
+    const resultEl = document.getElementById("result");
+    const exprEl = document.getElementById("expression");
+
+    let current = "0";
+    let previous = null;
+    let operator = null;
+    let resetNext = false;
+    let lastExpr = "";
+
+    const OP_SYMBOL = { "+": "+", "-": "−", "*": "×", "/": "÷" };
+
+    function format(value) {
+      if (value === "Erro") return value;
+      const [int, dec] = value.split(".");
+      const withSep = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return dec !== undefined ? `${withSep},${dec}` : withSep;
+    }
+
+    function render() {
+      const text = format(current);
+      resultEl.textContent = text;
+      resultEl.classList.remove("error");
+      const fontSize = text.length > 12 ? 28 : text.length > 9 ? 36 : 46;
+      resultEl.style.fontSize = fontSize + "px";
+      exprEl.textContent = previous !== null && operator
+        ? `${format(previous)} ${OP_SYMBOL[operator]}`
+        : lastExpr;
+    }
+
+    function pop() {
+      resultEl.classList.remove("pop");
+      void resultEl.offsetWidth;
+      resultEl.classList.add("pop");
+    }
+
+    function inputDigit(d) {
+      if (resetNext) { current = d; resetNext = false; }
+      else if (current === "0") current = d;
+      else if (current.replace(/[-.]/g, "").length < 15) current += d;
+      render();
+    }
+
+    function inputDecimal() {
+      if (resetNext) { current = "0"; resetNext = false; }
+      if (!current.includes(".")) current += ".";
+      render();
+    }
+
+    function calculate(a, b, op) {
+      a = parseFloat(a); b = parseFloat(b);
+      switch (op) {
+        case "+": return a + b;
+        case "-": return a - b;
+        case "*": return a * b;
+        case "/": return b === 0 ? NaN : a / b;
+      }
+    }
+
+    function clean(n) {
+      if (!isFinite(n)) return "Erro";
+      return String(parseFloat(n.toPrecision(12)));
+    }
+
+    function setOperator(op) {
+      if (operator && !resetNext) {
+        const r = calculate(previous, current, operator);
+        current = clean(r);
+        previous = current;
+        if (current === "Erro") { error(); return; }
+      } else {
+        previous = current;
+      }
+      operator = op;
+      resetNext = true;
+      render();
+    }
+
+    function equals() {
+      if (!operator) return;
+      const expr = `${format(previous)} ${OP_SYMBOL[operator]} ${format(current)} =`;
+      const r = clean(calculate(previous, current, operator));
+      if (r === "Erro") { error(); return; }
+      lastExpr = expr;
+      current = r;
+      previous = null;
+      operator = null;
+      resetNext = true;
+      render();
+      pop();
+    }
+
+    function error() {
+      current = "0"; previous = null; operator = null; resetNext = true;
+      resultEl.textContent = "Não é possível dividir por zero";
+      resultEl.classList.add("error");
+      exprEl.textContent = "";
+    }
+
+    function clear() {
+      current = "0"; previous = null; operator = null; resetNext = false; lastExpr = "";
+      render();
+    }
+
+    function sign() {
+      if (current === "0" || current === "Erro") return;
+      current = current.startsWith("-") ? current.slice(1) : "-" + current;
+      render();
+    }
+
+    function percent() {
+      current = clean(parseFloat(current) / 100);
+      render();
+    }
+
+    function backspace() {
+      if (resetNext) return;
+      current = current.length > 1 ? current.slice(0, -1) : "0";
+      if (current === "-") current = "0";
+      render();
+    }
+
+    // Mouse / touch
+    document.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.num !== undefined) inputDigit(btn.dataset.num);
+        else if (btn.dataset.op) setOperator(btn.dataset.op);
+        else switch (btn.dataset.action) {
+          case "clear": clear(); break;
+          case "sign": sign(); break;
+          case "percent": percent(); break;
+          case "decimal": inputDecimal(); break;
+          case "equals": equals(); break;
+        }
+      });
+    });
+
+    // Teclado
+    document.addEventListener("keydown", e => {
+      const k = e.key;
+      if (/^[0-9]$/.test(k)) inputDigit(k);
+      else if (k === "." || k === ",") inputDecimal();
+      else if (["+", "-", "*", "/"].includes(k)) { e.preventDefault(); setOperator(k); }
+      else if (k === "Enter" || k === "=") { e.preventDefault(); equals(); }
+      else if (k === "Escape") clear();
+      else if (k === "Backspace") backspace();
+      else if (k === "%") percent();
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>
